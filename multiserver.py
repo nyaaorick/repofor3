@@ -1,6 +1,15 @@
 #multiserver
 import socket
 import threading
+import time
+import sys # To get command line arguments (port)
+
+# Import the TupleSpace class from my other file
+try:
+    from tuple_space import TupleSpace
+except ImportError:
+    print("Error: Could not import TupleSpace class.")
+    sys.exit(1)
 
 def handle_client(client_socket,addr):
     """Handles client connection."""
