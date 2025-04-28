@@ -1,24 +1,27 @@
 '''
-# evelop a client/server networked system that
-# implements a “tuple space”. Clients send requests to include, read, or delete tuples. The server
-# needs to deal with multiple clients at the same time. Each client connects to the server, starting
-# “a session”, and sends one or more requests during the session, until it closes.
+# === Assignment Goal: Make a Client/Server "Tuple Space" System ===
 
+# Goal: Write a server program and a client program.
+# They talk to each other over the network to store and retrieve "Tuple" data.
+# The server needs to handle several clients at the same time.
+
+--- Basic Steps ---
 # After sending a request, the client waits for the response to arrive before sending the next
 # request to the server. This is what we call “synchronous behaviour”, which simplifies the client
 # implementation. After a number of requests and responses, the client terminates the session
 # and closes the connection. The server detects that the client closed the connection and also
 # ends the session with that client.
 
+what is a tuple space?
 # Tuples: The server will implement a “tuple space”. Each tuple is a key-value pair, in which both
 # key and value are strings of up to 999 characters each. The key needs to be unique, i.e. there
 # cannot be two tuples with the same key. You can imagine this as a simple table containing two
 # columns, namely a key and a value.
-
 #tuple space example:  
 # key:(greeting,lighthouse,andremaginot); 
 # value:(expression of goodwill, a tower with a light, a french politician)
 
+--- Three Things the Server Can Do (Operations) ---
 #The server implements three operations:
     #v = READ(k): if a tuple with key k exists, the tuple (k, v) is read and the value v is
     #returned; if k does not exist, the operation fails and v returns empty;
@@ -39,11 +42,7 @@
 
 
 
-
-
-
-
-###
+--- How the Client Shows Results ---
 #Client output. As the client runs, for each line processed, the client will display what the
 #operation was and its result. 
   #example output:
@@ -62,14 +61,14 @@
 
 
 
-###
+ --- Information the Server Needs to Print ---
 #Server output:The server, on its side, displays every 10s a summary of the current tuple
 #space, containing the number of tuples in the tuple space, the average tuple size, the average
 #key size, and the average value size (string), the total number of clients which have connected
 #(finished or not) so far, the total number of operations, total READs, total GETs, total PUTs, and
 #how many errors.
 
-
+--- How the Server Handles Many Clients at Once (Multi-threaded server) ---
 # Multi-threaded server:
 # As stated above, the server needs to handle sessions with multiple
 # clients at the same time. For this reason, the server will use multiple threads, each thread being
@@ -78,12 +77,11 @@
 # whenever a new client connects with the server. When the session/connection with the client is
 # closed, the thread terminates.
 
-#Command line arguments to client and server:
+--- Arguments Needed to Start the Server and Client ---
 #  You first start the server providing the port
 #number to be used by the server to wait for incoming connections. This has to be a high port,
-#such as 51234 (50000 <= port <= 59999).
-
-
+#such as 9090
+- You need to tell it three things
 on a different host, you start each of your clients. The client gets three arguments:
 - the hostname where the server resides (can be “localhost” if client and server are in the
 same host);
@@ -92,45 +90,35 @@ same host);
 server), in the format described above
 
 
+--- How They Communicate (TCP Sockets & Protocol) ---
 Multi-threaded server that uses TCP sockets. 
+# --- How They Communicate (TCP Sockets & Protocol) ---
+# - The client and server use a reliable network method called TCP Sockets to talk[cite: 111].
+# - The messages they send must follow a specific format (the protocol)[cite: 113].
 
-The focus of the assignment is to use TCP sockets to implement a client/server protocol with the three supported operations 
-(READ, GET, and PUT) and a server which correctly implements these operations despite concurrent access 
-of threads to the (shared) tuple space.
+# - **Client Request Message Format:**
+#   - `NNN R k`     (Read request)
+#   - `NNN G k`     (Get and delete request)
+#   - `NNN P k v`   (Put/Store request) [cite: 113]
+#   - `NNN`: Is a **3-digit number** showing the total length of this message (including NNN itself). Length is between 7 and 999[cite: 114].
+#   - `R`, `G`, `P`: Stand for the commands READ, GET, PUT[cite: 113].
+#   - `k`: Is the key[cite: 113].
+#   - `v`: Is the value (only used in PUT)[cite: 113].
+#   - Example Request:
+#     - `007 R a`
+#     - `053 P good-morning-message how are you feeling today?`
 
-Your implementation must adhere to the protocol 
-because your client and server should be able to interoperate with the server and client 
-developed by other students. 
- 
-Protocol. The protocol to be implemented encodes the request messages as follows: 
-- NNN R k 
-- NNN G k 
-- NNN P k v 
- 
-NNN is three characters indicating the total message size, the first letter indicates the command 
-(R for READ, G for GET, and P for PUT), k is the key and v is the value. The minimum size is 7 
-(which is when the key k is a single character in a READ/GET) and the maximum is 999.  
- 
-Examples of request messages that can be transmitted to a server: 
-- 007 R a 
-- 010 R abcd 
-- 012 G 123456 
-- 053 P good-morning-message how are you feeling today? 
- 
-The response messages (in line with what was defined earlier) are also implemented using 
-strings, whose format is one of the following: 
-- NNN OK (k, v) read 
-- NNN OK (k, v) removed 
-- NNN OK (k, v) added 
-- NNN ERR k already exists 
-- NNN ERR k does not exist 
- 
-Examples (if k and v are a single alphanumeric character): 
-- 018 OK (k, v) read 
-- 021 OK (k, v) removed 
-- 014 OK k added 
-- 024 ERR k already exists 
-- 024 ERR k does not exist 
+# - **Server Response Message Format:**
+#   - `NNN OK (k, v) read`
+#   - `NNN OK (k, v) removed`
+#   - `NNN OK (k, v) added`
+#   - `NNN ERR k already exists`
+#   - `NNN ERR k does not exist` [cite: 115]
+#   - `NNN`: Is also a **3-digit number** showing the total length of the response message[cite: 115].
+#   - Example Response:
+#     - `018 OK (k, v) read`
+#     - `024 ERR k already exists`
+
  
  
 How to test your networked system. 
@@ -141,13 +129,12 @@ different words (from an English dictionary). Each of the files has 100,000 requ
 Follow these steps: 
 1) start the server at one host 
 2) run all the clients one after the other (e.g. for Java it could be 
-for i in {1..10}; do java myclient server 51234 client-$i.txt; done 
+for i in {1..10};do java myclient server 9090 client-$i.txt; done 
 3) note the outputs produced by the clients and specially, the server 
 4) close the server (^c) and start it again 
 5) run all the clients one after the other (e.g. for Java it could be 
-for i in {1..10}; do java myclient server 51234 client-$i.txt &; done 
+for i in {1..10}; do java myclient server 9090 client-$i.txt &; done 
 6) note the outputs produced by the server
-
 
 '''
 import socket
