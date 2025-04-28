@@ -11,6 +11,41 @@ except ImportError:
     print("Error: Could not import TupleSpace class.")
     sys.exit(1)
 
+
+# --- Global Shared Resources ---
+# thread-safe ways to manage statistics.
+# Using locks for each counter is a straightforward approach.
+'''
+    --- Information the Server Needs to Print ---
+    Server output:
+    The server, on its side, displays every 10s a summary of the current tuple space, containing the number of tuples in the tuple space, the average tuple size, the average key size, and the average value size (string), the total number of clients which have connected (finished or not) so far, the total number of operations, total READs, total GETs, total PUTs, and how many errors.
+
+        #the total number of clients which have connected...: stats["total_clients"] 
+        #the total number of operations:  stats["total_ops"] 
+        #total READs:  stats["read_ops"] 
+        #total GETs:  stats["get_ops"] 
+        #total PUTs:  stats["put_ops"] 
+        #and how many errors: stats["error_count"] 
+
+    --- How the Server Handles Many Clients at Once (Multi-threaded server) ---
+    Multi-threaded server: As stated above, the server needs to handle sessions with multiple clients at the same time. 
+    For this reason, the server will use multiple threads
+
+'''
+stats = {
+    "total_clients": 0,
+    "total_ops": 0,
+    "read_ops": 0,
+    "get_ops": 0,
+    "put_ops": 0,
+    "error_count": 0,
+}
+stats_lock = threading.Lock() # A single lock to protect the entire stats dictionary
+
+
+
+
+
 def handle_client(client_socket,addr):
     """Handles client connection."""
     print(f"Client {addr} connected.")
