@@ -83,27 +83,36 @@ def handle_client(client_socket, addr, tuple_space):
         try:
             
             msg_len_str = header_bytes.decode('utf-8') # decode msg length
-            # Process the message and update stats accordingly
-            if message.startswith("PUT"):
-                _, key, value = message.split()
-                success, status = tuple_space.put(key, value)
-                update_stats("put_ops", 1)
-            elif message.startswith("GET"):
-                _, key = message.split()
-                value, status = tuple_space.get(key)
-                update_stats("get_ops", 1)
-            elif message.startswith("READ"):
-                _, key = message.split()
-                value, status = tuple_space.read(key)
-                update_stats("read_ops", 1)
-            else:
-                status = "ERR_UNKNOWN_COMMAND"
-                update_stats("error_count", 1)
+            total_msg_len = int(msg_len_str) # convert to int
 
-            response_payload = f"{status} ({key}, {value})" if 'value' in locals() else status
-        except Exception as e:
-            response_payload = f"ERR {str(e)}"
-            update_stats("error_count", 1)
+        except :
+            print(f"Error decoding message length from client {addr}.")
+            #if not total_msg_len <= 999 and >= 7 , handel error
+            break
+        
+        # Receive the body of the message
+        bytes_to_read = total_msg_len - 3
+        message_body = "" # 默认消息体为空
+
+        if bytes_to_read > 0:
+            # **简化点：尝试一次性读取所有需要的字节**
+            body_bytes = client_socket.recv(bytes_to_read)
+
+             # **关键检查：** 必须检查是否收到了预期的字节数
+            if not body_bytes or len(body_bytes) != bytes_to_read:
+                print(f"err: {len(body_bytes)} != {bytes_to_read}")
+                client_active = False
+                break # 退出主循环
+
+                # 如果检查通过，解码消息体
+                message_body = body_bytes.decode('utf-8')
+            # (如果 bytes_to_read 为 0，message_body 保持为空字符串)
+
+            # --- 接收完成 ---
+            print(f"[收到] 来自 {addr}: '{message_body}'")
+            update_stats("total_ops") # 记录总操作尝试次数
+
+
         
 
         
