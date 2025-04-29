@@ -65,6 +65,48 @@ def get_stat(key):
 def handle_client(client_socket, addr, tuple_space):
     """Handles client connection."""
     print(f"Client {addr} connected.")
+    client_active = True #
+
+    # 循环处理来自这个客户端的多个请求
+    while client_active:
+        message_body = None # 重置消息体
+        response_payload = "" # 重置响应内容
+        key = None                # 初始化，以便在所有分支中都可能访问
+        value = None              # 初始化
+
+        header_bytes = client_socket.recv(3)  # Receive header from the client
+        if not header_bytes:
+            print(f"Client {addr} disconnected.")
+            client_active = False
+            break  #error handling
+        
+        try:
+            
+            msg_len_str = header_bytes.decode('utf-8') # decode msg length
+            # Process the message and update stats accordingly
+            if message.startswith("PUT"):
+                _, key, value = message.split()
+                success, status = tuple_space.put(key, value)
+                update_stats("put_ops", 1)
+            elif message.startswith("GET"):
+                _, key = message.split()
+                value, status = tuple_space.get(key)
+                update_stats("get_ops", 1)
+            elif message.startswith("READ"):
+                _, key = message.split()
+                value, status = tuple_space.read(key)
+                update_stats("read_ops", 1)
+            else:
+                status = "ERR_UNKNOWN_COMMAND"
+                update_stats("error_count", 1)
+
+            response_payload = f"{status} ({key}, {value})" if 'value' in locals() else status
+        except Exception as e:
+            response_payload = f"ERR {str(e)}"
+            update_stats("error_count", 1)
+        
+
+        
 
     message = client_socket.recv(1024).decode('utf-8')  # Receive message from the client
     print("Received:", message)  # Print the received message
