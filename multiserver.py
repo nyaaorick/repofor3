@@ -67,81 +67,110 @@ def handle_client(client_socket, addr, tuple_space):
     print(f"Client {addr} connected.")
     client_active = True #
 
-    # 循环处理来自这个客户端的多个请求
-    while client_active:
-        message_body = None # 重置消息体
-        response_payload = "" # 重置响应内容
-        key = None                # 初始化，以便在所有分支中都可能访问
-        value = None              # 初始化
-
-        header_bytes = client_socket.recv(3)  # Receive header from the client
-        if not header_bytes:
-            print(f"Client {addr} disconnected.")
-            client_active = False
-            break  #error handling
-        
-        try:
-            
-            msg_len_str = header_bytes.decode('utf-8') # decode msg length
-            total_msg_len = int(msg_len_str) # convert to int
-
-        except :
-            print(f"Error decoding message length from client {addr}.")
-            #if not total_msg_len <= 999 and >= 7 , handel error
-            break
-        
-        # Receive the body of the message
-        bytes_to_read = total_msg_len - 3
-        message_body = "" # 默认消息体为空
-
-        if bytes_to_read > 0:
-            # **简化点：尝试一次性读取所有需要的字节**
-            body_bytes = client_socket.recv(bytes_to_read)
-
-             # **关键检查：** 必须检查是否收到了预期的字节数
-            if not body_bytes or len(body_bytes) != bytes_to_read:
-                print(f"err: {len(body_bytes)} != {bytes_to_read}")
-                client_active = False
-                break # 退出主循环
-
-                # 如果检查通过，解码消息体
-                message_body = body_bytes.decode('utf-8')
-            # (如果 bytes_to_read 为 0，message_body 保持为空字符串)
-
-            # --- 接收完成 ---
-            print(f"[收到] 来自 {addr}: '{message_body}'")
-            update_stats("total_ops") # 记录总操作尝试次数
-
-
-        
-
-        
-
-    message = client_socket.recv(1024).decode('utf-8')  # Receive message from the client
-    print("Received:", message)  # Print the received message
-
-    response = f"Message '{message}' received by server."  # Prepare a response to client
-    client_socket.sendall(response.encode('utf-8'))  # Send response to client
-    """Handles client connection."""
-    print(f"Client {addr} connected.")
-
-    message = client_socket.recv(1024).decode('utf-8')  # Receive message from the client
-    print("Received:", message)  # Print the received message
-
-    response = f"Message '{message}' received by server."  # Prepare a response to client
-    client_socket.sendall(response.encode('utf-8'))  # Send response to client
-   
-
-def start_server(host='localhost', port=9090):
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((host, port))
-    server_socket.listen(5)  # Allow up to 5 clients to connect
-    print(f"Server started on {host}:{port}")
-
-    while True:
-        client_socket, addr = server_socket.accept()  # Accept a new connection
-        print(f"Connection from {addr} has been established.")
-        client_thread = threading.Thread(target=handle_client, args=(client_socket,addr))
-        client_thread.start()  # Start a new thread for the client
     
+    while client_active:
+        message_body = receive_message(client_socket, addr)
+        if message_body is None:
+            client_active = False # Label Disconnect
+            break # 
+
+        print(f"[收到] 来自 {addr}: '{message_body}'")
+
         
+        response_payload = process_command(message_body, tuple_space)
+        print(f"[响应] 准备发给 {addr}: '{response_payload}'")
+
+        if not send_message(client_socket, addr, response_payload):
+            client_active = False # 标记断开
+            break # 
+
+    print(f"关闭客户端Shut Down Client {addr} 的连接's connection.")
+    client_socket.close()
+
+# --- 命令处理辅助函数 ---
+def process_command(message_body, tuple_space):
+    #
+    ##
+    ###
+    return 1
+
+def receive_message(client_socket, addr):
+    #
+    #
+    #
+    return 1
+
+def send_message(client_socket, addr, response_payload):
+    """Sends a message to the client."""
+    return 1
+
+
+
+    # 1. 发送响应
+# """ message_body = None # 重置消息体
+#         response_payload = "" # 重置响应内容
+#         key = None                # 初始化，以便在所有分支中都可能访问
+#         value = None              # 初始化
+
+#         header_bytes = client_socket.recv(3)  # Receive header from the client
+#         if not header_bytes:
+#             print(f"Client {addr} disconnected.")
+#             client_active = False
+#             break  #error handling
+        
+#         try:
+            
+#             msg_len_str = header_bytes.decode('utf-8') # decode msg length
+#             total_msg_len = int(msg_len_str) # convert to int
+
+#         except :
+#             print(f"Error decoding message length from client {addr}.")
+#             #if not total_msg_len <= 999 and >= 7 , handel error
+#             break
+        
+#         # Receive the body of the message
+#         bytes_to_read = total_msg_len - 3
+#         message_body = "" # 默认消息体为空
+
+#         if bytes_to_read > 0:
+#             # **简化点：尝试一次性读取所有需要的字节**
+#             body_bytes = client_socket.recv(bytes_to_read)
+
+#              # **关键检查：** 必须检查是否收到了预期的字节数
+#             if not body_bytes or len(body_bytes) != bytes_to_read:
+#                 print(f"err: {len(body_bytes)} != {bytes_to_read}")
+#                 client_active = False
+#                 break # 退出主循环
+
+#                 # 如果检查通过，解码消息体
+#                 message_body = body_bytes.decode('utf-8')
+#             # (如果 bytes_to_read 为 0，message_body 保持为空字符串)
+
+#             # --- 接收完成 ---
+#             print(f"[收到] 来自 {addr}: '{message_body}'")
+#             update_stats("total_ops") # 记录总操作尝试次数"""
+#     message = client_socket.recv(1024).decode('utf-8')  # Receive message from the client
+#     print("Received:", message)  # Print the received message
+
+#     response = f"Message '{message}' received by server."  # Prepare a response to client
+#     client_socket.sendall(response.encode('utf-8'))  # Send response to client
+#     """Handles client connection."""
+#     print(f"Client {addr} connected.")
+
+#     message = client_socket.recv(1024).decode('utf-8')  # Receive message from the client
+#     print("Received:", message)  # Print the received message
+
+#     response = f"Message '{message}' received by server."  # Prepare a response to client
+#     client_socket.sendall(response.encode('utf-8'))  # Send response to client
+
+
+# def start_server(host='localhost', port=9090):
+#     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     server_socket.bind((host, port))
+#     server_socket.listen(5)  # Allow up to 5 clients to connect
+#     print(f"Server started on {host}:{port}")
+
+#     while True:
+#         client_socket, addr = server_socket.accept()  # Accept a new connection
+#         print(f"Connection from {addr} has been established.")
+#         client_thread = threading.Thread(target=handle_client, args=(client_socket,addr))
