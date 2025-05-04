@@ -22,6 +22,10 @@ class TupleSpace:
 
     def put(self, key: str, value: str):
         # Check if the key is valid
+
+        #LBYL
+        # Check if the key exists, if it does, return an error
+        #if it doesn't, add the key-value pair to the dictionary
         with self._lock: # get lock to ensure thread safety
             # Check if the key already exists
             if key in self._data:
