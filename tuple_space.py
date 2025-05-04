@@ -4,47 +4,55 @@
 import threading
 
 class TupleSpace:
+
+    # Define constants for status codes
+    # Define constants for status codes
+    # Define constants for status codes
+    OK_ADDED = "OK_ADDED"
+    OK_READ = "OK_READ"
+    OK_REMOVED = "OK_REMOVED"
+    ERR_EXIST = "ERR_EXIST"
+    ERR_NOEXIST = "ERR_NOEXIST"
+
+
     def __init__(self):
-        self._data = {}  # store tuples as key-value pairs
+        self._data: Dict[str, str] = {}  # Internal dict to store key-value pairs
         self._lock = threading.Lock() #lock for thread safety
 
-    def put(self, key, value):
+    def put(self, key: str, value: str):
         # Check if the key is valid
         with self._lock: # get lock to ensure thread safety
             # Check if the key already exists
             if key in self._data:
                 print(f"[TupleSpace] PUT : key '{key}' exist.") 
-                return False, "ERR_EXIST" 
+                return False, self.ERR_EXIST #err exist
             
             else:
                 self._data[key] = value
                 print(f"[TupleSpace]  add : ({key}, {value})") 
-                return True, "OK_ADDED"
+                return True, self.OK_ADDED #ok added
 
-    def read(self, key):
+    def read(self, key: str):
         with self._lock: #get lock to ensure thread safety
-            if key in self._data:
-                value = self._data[key]
-                print(f"[TupleSpace] read success : ({key}, {value})") # 
-                return value, "OK_READ" 
+            # Use dictionary's get method which returns None if key is not found
+            value = self._data.get(key)
+            if value is not None:
+                return value, self.OK_READ
             else:
-                print(f"[TupleSpace] read failed : key '{key}' not exist.")
-                return None, "ERR_NOEXIST" 
+                return None, self.ERR_NOEXIST
 
     def get(self, key):
         with self._lock: # get lock to ensure thread safety
-            if key in self._data:
-
-                # 
+            try:
                 value = self._data.pop(key)
-                
-                return value, "OK_REMOVED" #
+                return value, self.OK_REMOVED
             
-            else:
+            except KeyError:
+                # Key does not exist, return None
                 print(f"[TupleSpace] get failed : key '{key}' not exist.")
-                return None, "ERR_NOEXIST" #
+                return None, self.ERR_NOEXIST
 
-    def get_count(self):
+    def get_count(self) -> int:
         #safe access to the data
         #give the lock to ensure thread safety
         with self._lock: 
@@ -62,13 +70,11 @@ class TupleSpace:
                     'avg_value_size': 0.0
                 }
 
-            total_key_len = 0
-            total_value_len = 0
-            for key, value in self._data.items():
-                # calculate the length of the key and valu
-                total_key_len += len(key)
-                total_value_len += len(value)
 
+            # calculate the total size of the keys and values
+            total_key_len = sum(len(key) for key in self._data.keys())
+            total_value_len = sum(len(value) for value in self._data.values())
+            # calculate the average size of the tuples
             # use float division to avoid integer division
             #calculate average sizes
             avg_key_size = total_key_len / count
