@@ -57,8 +57,72 @@ def handle_client(client_socket, addr, tuple_space):
     print(f"关闭客户端Shut Down Client {addr} 的连接's connection.")
     client_socket.close()
 
+
 #handle processing of the command
 def process_command(message_body, tuple_space):
+    parts = message_body.split(' ', 2)  #   split the message into parts
+    command = parts[0].upper()  # convert to uppercase
+    # Initialize the response payload and key-value pair
+    response_payload = None
+    key = None
+    value = None
+
+    try:
+        #handle the put
+        if command == 'PUT' and len(parts) == 3:
+            update_stats("put_ops") # update put operations
+            key, value = parts[1], parts[2] 
+            # use put in tuple_space
+            success, _ = tuple_space.put(key, value) 
+            if success:
+                response_payload = f"OK ({key}, {value}) added"
+            else:
+                #key exists
+                response_payload = f"ERR {key} already exists"
+                update_stats("error_count") 
+
+
+        # handle the get
+        elif command == 'GET' and len(parts) >= 2:
+            update_stats("get_ops") 
+            key = parts[1]
+            # use get in tuple_space
+
+            value_got, status = tuple_space.get(key) #value_got 是返回的值，status 是状态码
+    
+            if status == "OK_REMOVED": 
+                value = value_got 
+                response_payload = f"OK ({key}, {value}) removed"
+            else: 
+                response_payload = f"ERR {key} does not exist"
+                update_stats("error_count")
+
+        #handle the read
+        elif command == 'READ' and len(parts) >= 2:
+            update_stats("read_ops")
+            key = parts[1]
+            # use read in tuple_space
+            value_read, status = tuple_space.read(key)
+            if status == "OK_READ":
+                value = value_read 
+                response_payload = f"OK ({key}, {value}) read"
+            else: 
+                response_payload = f"ERR {key} does not exist"
+                update_stats("error_count")
+
+        # handle anything not get or put or read
+        else: 
+            print(f"无效命令/格式: {message_body}")
+            response_payload = "ERR"
+            update_stats("error_count")
+    
+    #exception handling
+    except Exception as e:
+        response_payload = "ERR server internal error" # any error
+        update_stats("error_count")
+
+    # 返回最终准备好的响应负载字符串
+    return response_payload
     return 1
 
 
