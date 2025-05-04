@@ -2,6 +2,7 @@
 # tuple_space.py
 
 import threading
+from typing import Dict
 
 class TupleSpace:
 
@@ -24,12 +25,12 @@ class TupleSpace:
         with self._lock: # get lock to ensure thread safety
             # Check if the key already exists
             if key in self._data:
-                print(f"[TupleSpace] PUT : key '{key}' exist.") 
+                print(f"[TupleSpace] put failed : key '{key}' already exist.")
                 return False, self.ERR_EXIST #err exist
             
             else:
                 self._data[key] = value
-                print(f"[TupleSpace]  add : ({key}, {value})") 
+                print(f"[TupleSpace] put : key '{key}' added.")
                 return True, self.OK_ADDED #ok added
 
     def read(self, key: str):
@@ -38,14 +39,19 @@ class TupleSpace:
             value = self._data.get(key)
             if value is not None:
                 return value, self.OK_READ
+                print(f"[TupleSpace] read : key '{key}' exist.")
             else:
                 return None, self.ERR_NOEXIST
+                print(f"[TupleSpace] read failed : key '{key}' not exist.")
+                # Key does not exist, return None
 
     def get(self, key):
         with self._lock: # get lock to ensure thread safety
             try:
                 value = self._data.pop(key)
                 return value, self.OK_REMOVED
+                # Key exists, remove it from the dictionary
+                print(f"[TupleSpace] get : key '{key}' exist.")     
             
             except KeyError:
                 # Key does not exist, return None
