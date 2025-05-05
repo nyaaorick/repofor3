@@ -8,6 +8,8 @@ from tuple_space import TupleSpace
 # thread-safe ways to manage statistics.
 # Using locks for each counter is a straightforward approach.
 
+
+#keep track of operations
 stats = {
     "total_clients": 0,
     "total_ops": 0,
@@ -121,14 +123,59 @@ def process_command(message_body, tuple_space):
         response_payload = "ERR server internal error" # any error
         update_stats("error_count")
 
-    # 返回最终准备好的响应负载字符串
+    # return the response payload
     return response_payload
-    return 1
 
 
 #handle receiving the message
 def receive_message(client_socket, addr):
-    return 1
+    message_body = None # reset message body
+    try:
+        header_bytes = client_socket.recv(3)
+        if not header_bytes or len(header_bytes) < 3:
+            return None # handel err
+
+        # decode the header bytes to get the message length
+        try:
+            msg_len_str = header_bytes.decode('utf-8')
+            total_msg_len = int(msg_len_str)
+            # check if the message length is valid 7 - 992
+            if not (7 <= total_msg_len <= 992):
+                update_stats("error_count")
+                return None
+                 
+            
+        except (ValueError, UnicodeDecodeError) as e:
+
+
+            
+            update_stats("error_count")
+            return None # 
+
+        # 3. Calculate the number of bytes to read for the message body
+        bytes_to_read = total_msg_len - 3
+        if bytes_to_read < 0:
+             update_stats("error_count")
+             return None
+
+        body_bytes_list = []
+        bytes_read = 0
+
+        while bytes_read < bytes_to_read:
+            chunk = client_socket.recv(min(bytes_to_read - bytes_read, 4096))
+            body_bytes_list.append(chunk)
+            bytes_read += len(chunk)
+
+        #decode the message body
+        message_body = b"".join(body_bytes_list).decode('utf-8')
+        print(f"[收到] 来自 {addr}: '{message_body}'")
+    
+    # exception handling
+    except Exception as e:
+        update_stats("error_count")
+        return None # 
+
+    return message_body #return the message body
 
 #handle sending the message
 def send_message(client_socket, addr, response_payload):
