@@ -2,6 +2,7 @@
 import socket
 import threading
 from tuple_space import TupleSpace
+import time
 # --- Server Configuration ---
 
 # --- Global Shared Resources ---
@@ -18,6 +19,7 @@ stats = {
     "put_ops": 0,
     "error_count": 0,
 }
+
 stats_lock = threading.Lock() # A single lock to protect the entire stats dictionary
 
 
@@ -146,9 +148,6 @@ def receive_message(client_socket, addr):
                  
             
         except (ValueError, UnicodeDecodeError) as e:
-
-
-            
             update_stats("error_count")
             return None # 
 
@@ -168,7 +167,7 @@ def receive_message(client_socket, addr):
 
         #decode the message body
         message_body = b"".join(body_bytes_list).decode('utf-8')
-        print(f"[收到] 来自 {addr}: '{message_body}'")
+        print(f"[rec] from {addr}: '{message_body}'")
     
     # exception handling
     except Exception as e:
@@ -176,40 +175,140 @@ def receive_message(client_socket, addr):
         return None # 
 
     return message_body #return the message body
+    
 
 #handle sending the message
+#As the client runs, for each line processed, 
+#the client will display what the operation was and its result from the server.
 def send_message(client_socket, addr, response_payload):
-    return 1
 
-def message_body(client_socket, addr):
+    try:
+        payload_bytes = response_payload.encode('utf-8')
+        total_len = len(payload_bytes) + 3
 
-    return 1
+        # check if the total length is valid
+        if total_len > 992:
+             print(f"[err] len too long ({total_len} bytes) send to {addr}")
+             response_payload = "ERR response too long"
+             payload_bytes = response_payload.encode('utf-8')
+             total_len = len(payload_bytes) + 3
+             update_stats("error_count")
+             return False 
 
+        header = f"{total_len:03d}"
+        full_message = header.encode('utf-8') + payload_bytes
+        client_socket.sendall(full_message)
+        return True 
+   
+    # exception handling
+    except Exception as e:
+        print(f"[err] sned to {addr} exception happen : {e}")
+        update_stats("error_count")
+        return False #failure
+
+
+#
 def start_server(host='localhost', port=51234):
+
+    # crate a tuple space instance
+    tuple_space = TupleSpace()
+    print("TupleSpace started.")
+
+
+    # daemon=True this thread is a daemon thread, meaning it will not prevent the program from exiting.
+    stats_thread = threading.Thread(target=report_stats, args=(10, tuple_space), daemon=True)
+    stats_thread.start()
+    print("stats thread started every 10s.")
+
+
+    #socket server
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind((host, port))
+     
+     
+    #listen for incoming connections
+    server_socket.listen(10)
+    print(f"server {host}:{port} start, wait for connection...")
+
+    # Main loop to accept and handle client connections
+    # The server will run indefinitely until interrupted
+    try:
+        while True: 
+                # 
+                # accept() will block until a client connects
+                # server_socket is the listening socket
+                # client_socket is the new socket object to communicate with the client
+                # addr is the address bound to the socket on the other end
+                # accept() returns a tuple (client_socket, addr)
+                client_socket, addr = server_socket.accept()
+
+                # calulate the total number of clients
+                update_stats("total_clients")
+                print(f"\n[connection] accept from {addr} 's connection , total client num : {get_stat('total_clients')}")
+
+                # Create a new thread for each client connection
+                client_thread = threading.Thread(target=handle_client,args=(client_socket, addr, tuple_space))
+                # execute the thread
+                client_thread.start()
+
+    except KeyboardInterrupt:
+        print("\n[err] server shutdown by keyboard interrupt.")
+
+    finally:
+        # Close the server socket
+        # This will close the listening socket and all connected client sockets
+        print("close socket。")
+        server_socket.close()
+
+def report_stats(interval, tuple_space):
+     #every "interval"  second , it print 
+     while True:
+        time.sleep(interval)
+        ts_stats = tuple_space.calculate_stats() 
+        with stats_lock:
+            current_stats = stats.copy() 
+
+        #print everything
+        print("\n----- Server Statistics -----")
+        print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"  Connected Clients (Total): {current_stats['total_clients']}")
+        print(f"  Tuple Space:")
+        print(f"    - Count: {ts_stats['count']}")
+        print(f"    - Avg Tuple Size: {ts_stats['avg_tuple_size']:.2f}")
+        print(f"    - Avg Key Size: {ts_stats['avg_key_size']:.2f}")
+        print(f"    - Avg Value Size: {ts_stats['avg_value_size']:.2f}")
+        print(f"  Operations:")
+        print(f"    - Total: {current_stats['total_ops']}")
+        print(f"    - READs: {current_stats['read_ops']}")
+        print(f"    - GETs: {current_stats['get_ops']}")
+        print(f"    - PUTs: {current_stats['put_ops']}")
+        print(f"  Errors: {current_stats['error_count']}")
+        print("):---------------------------------------------:(\n")
     
    
+
+
    
-   return 1
-   
    
 
-'''
-    --- Information the Server Needs to Print ---
-    Server output:
-    The server, on its side, displays every 10s a summary of the current tuple space, containing the number of tuples in the tuple space, the average tuple size, the average key size, and the average value size (string), the total number of clients which have connected (finished or not) so far, the total number of operations, total READs, total GETs, total PUTs, and how many errors.
+# '''
+#     --- Information the Server Needs to Print ---
+#     Server output:
+#     The server, on its side, displays every 10s a summary of the current tuple space, containing the number of tuples in the tuple space, the average tuple size, the average key size, and the average value size (string), the total number of clients which have connected (finished or not) so far, the total number of operations, total READs, total GETs, total PUTs, and how many errors.
 
-        #the total number of clients which have connected...: stats["total_clients"] 
-        #the total number of operations:  stats["total_ops"] 
-        #total READs:  stats["read_ops"] 
-        #total GETs:  stats["get_ops"] 
-        #total PUTs:  stats["put_ops"] 
-        #and how many errors: stats["error_count"] 
+#         #the total number of clients which have connected...: stats["total_clients"] 
+#         #the total number of operations:  stats["total_ops"] 
+#         #total READs:  stats["read_ops"] 
+#         #total GETs:  stats["get_ops"] 
+#         #total PUTs:  stats["put_ops"] 
+#         #and how many errors: stats["error_count"] 
 
-    --- How the Server Handles Many Clients at Once (Multi-threaded server) ---
-    Multi-threaded server: As stated above, the server needs to handle sessions with multiple clients at the same time. 
-    For this reason, the server will use multiple threads
+#     --- How the Server Handles Many Clients at Once (Multi-threaded server) ---
+#     Multi-threaded server: As stated above, the server needs to handle sessions with multiple clients at the same time. 
+#     For this reason, the server will use multiple threads
 
-'''
+# '''
  # 3. Calculate the number of bytes to read for the message body
     #bytes_to_read = total_msg_len - len(header_bytes)
 # """ message_body = None # 重置消息体
