@@ -261,6 +261,13 @@ def start_server(host='localhost', port=51234):
         print("close socket。")
         server_socket.close()
 
+
+if __name__ == "__main__":
+    # default as assigment advised
+    server_port = 51234
+    # loaclhost
+    start_server(host='0.0.0.0', port=server_port)
+
 def report_stats(interval, tuple_space):
      #every "interval"  second , it print 
      while True:
