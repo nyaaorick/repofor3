@@ -1,14 +1,14 @@
 #multiserver
 import socket
 import threading
-from tuple_space import TupleSpace
 import time
+from tuple_space import TupleSpace
+
 # --- Server Configuration ---
 
-# --- Global Shared Resources ---
+
 # thread-safe ways to manage statistics.
 # Using locks for each counter is a straightforward approach.
-
 
 #keep track of operations
 stats = {
@@ -21,7 +21,6 @@ stats = {
 }
 
 stats_lock = threading.Lock() # A single lock to protect the entire stats dictionary
-
 
 # --- Update Stats Safely ---
 def update_stats(key, increment=1):#add a default increment of 1
@@ -49,8 +48,6 @@ def handle_client(client_socket, addr, tuple_space):
             break # 
 
         print(f"[收到] 来自 {addr}: '{message_body}'")
-
-        
         response_payload = process_command(message_body, tuple_space)
         print(f"[响应] 准备发给 {addr}: '{response_payload}'")
 
@@ -67,6 +64,7 @@ def process_command(message_body, tuple_space):
     parts = message_body.split(' ', 2)  #   split the message into parts
     command = parts[0].upper()  # convert to uppercase
     # Initialize the response payload and key-value pair
+
     response_payload = None
     key = None
     value = None
@@ -207,6 +205,33 @@ def send_message(client_socket, addr, response_payload):
         return False #failure
 
 
+
+def report_stats(interval, tuple_space):
+     #every "interval"  second , it print 
+     while True:
+        time.sleep(interval)
+        ts_stats = tuple_space.calculate_stats() 
+        with stats_lock:
+            current_stats = stats.copy() 
+
+        #print everything
+        print("\n----- Server Statistics -----")
+        print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"  Connected Clients (Total): {current_stats['total_clients']}")
+        print(f"  Tuple Space:")
+        print(f"    - Count: {ts_stats['count']}")
+        print(f"    - Avg Tuple Size: {ts_stats['avg_tuple_size']:.2f}")
+        print(f"    - Avg Key Size: {ts_stats['avg_key_size']:.2f}")
+        print(f"    - Avg Value Size: {ts_stats['avg_value_size']:.2f}")
+        print(f"  Operations:")
+        print(f"    - Total: {current_stats['total_ops']}")
+        print(f"    - READs: {current_stats['read_ops']}")
+        print(f"    - GETs: {current_stats['get_ops']}")
+        print(f"    - PUTs: {current_stats['put_ops']}")
+        print(f"  Errors: {current_stats['error_count']}")
+        print("):---------------------------------------------:(\n")
+
+
 #
 def start_server(host='localhost', port=51234):
 
@@ -218,7 +243,7 @@ def start_server(host='localhost', port=51234):
     # daemon=True this thread is a daemon thread, meaning it will not prevent the program from exiting.
     stats_thread = threading.Thread(target=report_stats, args=(10, tuple_space), daemon=True)
     stats_thread.start()
-    print("stats thread started every 10s.")
+    print("stats thread reporter now starts every 10s.")
 
 
     #socket server
@@ -228,7 +253,7 @@ def start_server(host='localhost', port=51234):
      
      
     #listen for incoming connections
-    server_socket.listen(10)
+    server_socket.listen(10)  ### listen 10 thread
     print(f"server {host}:{port} start, wait for connection...")
 
     # Main loop to accept and handle client connections
@@ -267,31 +292,6 @@ if __name__ == "__main__":
     server_port = 51234
     # loaclhost
     start_server(host='0.0.0.0', port=server_port)
-
-def report_stats(interval, tuple_space):
-     #every "interval"  second , it print 
-     while True:
-        time.sleep(interval)
-        ts_stats = tuple_space.calculate_stats() 
-        with stats_lock:
-            current_stats = stats.copy() 
-
-        #print everything
-        print("\n----- Server Statistics -----")
-        print(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"  Connected Clients (Total): {current_stats['total_clients']}")
-        print(f"  Tuple Space:")
-        print(f"    - Count: {ts_stats['count']}")
-        print(f"    - Avg Tuple Size: {ts_stats['avg_tuple_size']:.2f}")
-        print(f"    - Avg Key Size: {ts_stats['avg_key_size']:.2f}")
-        print(f"    - Avg Value Size: {ts_stats['avg_value_size']:.2f}")
-        print(f"  Operations:")
-        print(f"    - Total: {current_stats['total_ops']}")
-        print(f"    - READs: {current_stats['read_ops']}")
-        print(f"    - GETs: {current_stats['get_ops']}")
-        print(f"    - PUTs: {current_stats['put_ops']}")
-        print(f"  Errors: {current_stats['error_count']}")
-        print("):---------------------------------------------:(\n")
     
    
 
