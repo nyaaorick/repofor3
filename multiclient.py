@@ -1,8 +1,6 @@
 # This script creates multiple client threads that connect to a server and send messages.
 import threading
-import time
 import socket
-# This is a simple multiclient example where multiple clients connect to a server
 
 # and send messages concurrently. Each client runs in its own thread.
 # def main():
@@ -19,16 +17,140 @@ import socket
 
 #     print("All clients have finished sending messages.")
 
-def client_thread(client_id):
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect(('localhost', 51234))  # Connect to the server
+def send_nnn_message(sock, payload_str, client_id_for_log="?"):
 
-    message = f"Hello from client {client_id}!"
-    client_socket.sendall(message.encode('utf-8'))  # Send message to the server
+    try:
+        payload_bytes = payload_str.encode('utf-8')
+        total_len = len(payload_bytes) + 3
 
-    response = client_socket.recv(1024).decode('utf-8')  # Receive response from the server
-    print(f"Client {client_id} received: {response}")  # Print the server's response
+        if not (0 <= total_len <= 992):
+            return False
+        
+        header = f"{total_len:03d}"
+        full_message = header.encode('utf-8') + payload_bytes
+        sock.sendall(full_message)
+        return True
     
+    except Exception as e:
+        return False
+    
+    # Send a message to the server
+    
+def receive_nnn_message(sock, client_id_for_log="?"):
+
+    message_body = None
+    try:
+        header_bytes = sock.recv(3)
+        if not header_bytes or len(header_bytes) < 3:
+            return None # header err
+        try:
+            msg_len_str = header_bytes.decode('utf-8')
+            total_msg_len = int(msg_len_str)
+            if not (0 < total_msg_len <= 992):
+                 raise ValueError(f"err: {total_msg_len}")
+
+        except (ValueError, UnicodeDecodeError) as e:
+            return None
+
+        bytes_to_read = total_msg_len - 3
+
+        if bytes_to_read < 0:
+             return None
+        
+        body_bytes_list = []
+        bytes_read = 0
+        while bytes_read < bytes_to_read:
+            chunk = sock.recv(min(bytes_to_read - bytes_read, 4096))
+
+            if not chunk:
+                return None
+            body_bytes_list.append(chunk)
+            bytes_read += len(chunk)
+        message_body = b"".join(body_bytes_list).decode('utf-8')
+  
+  
+    except Exception as e:
+        return None
+    
+    return message_body
+
+#forget about old client_thread, i name it clinet_task instead
+# thread that each client will run
+# This function will be run by each client thread
+def client_task(client_id, server_host, server_port, request_filename):
+    thread_name = f"Client-{client_id}({request_filename})"
+    print(f"[{thread_name}] ,this thread started...")
+
+    # socket connection
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # delay to stagger the start of threads
+    client_socket.settimeout(30.0)
+
+    try:
+        client_socket.connect((server_host, server_port))
+        print(f"[{thread_name}] success.")
+
+    except Exception as e:
+        print(f"[{thread_name}] fail: {e}")
+        return  # 连接失败，此线程任务结束
+
+    line_num = 0
+    processed_count = 0
+    error_count = 0
+
+    try:
+        with open(request_filename, 'r', encoding='utf-8') as f:
+            for line in f:
+                line_num += 1
+                original_request_line = line.strip()
+
+                if not original_request_line or original_request_line.startswith('#'):
+                    continue
+
+                if not send_nnn_message(client_socket, original_request_line, client_id):
+                    error_count += 1
+                    break  #
+
+                # receive response
+                response_body = receive_nnn_message(client_socket, client_id)
+
+                if response_body is None:
+                    error_count += 1
+                    break  # 接收失败，停止处理此文件
+
+                # print the response
+                print(f"[{thread_name}] {original_request_line}: {response_body}")
+                processed_count += 1
+
+                # print every 1000 lines
+                if processed_count % 1000 == 0:
+                    print(f"[{thread_name}] managed to handle {processed_count} times of request ...")
+
+
+
+    except Exception as e:
+        print(f"[{thread_name} err] when dealing with file ")
+        error_count += 1
+
+    finally:
+        print(
+            f"[{thread_name}] finished !  it handle {processed_count}  request,  and it find {error_count}  err  now ")
+        client_socket.close()
+
+
+# def client_thread(client_id):
+#     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#     client_socket.connect(('localhost', 51234))  # Connect to the server
+#
+#     message = f"Hello from client {client_id}!"
+#     client_socket.sendall(message.encode('utf-8'))  # Send message to the server
+#
+#     response = client_socket.recv(1024).decode('utf-8')  # Receive response from the server
+#     print(f"Client {client_id} received: {response}")  # Print the server's response
+#
+
+
 if __name__ == "__main__":
     server_host = 'localhost'
     server_port = 51234
@@ -46,23 +168,20 @@ if __name__ == "__main__":
         'test-workload/client_10.txt'
     ]
 
-    threads = [] 
+    threads = []
 
     for i, filename in enumerate(filenames):
-        client_id = i + 1 # gice client a unique ID
+        client_id = i + 1  # give client a unique ID
 
-        #create a thread for each client
-        thread = threading.Thread(target=client_thread,  # target function
+        # create a thread for each client
+        thread = threading.Thread(target=client_task,  # target function
                                   args=(client_id, server_host, server_port, filename))
-        threads.append(thread) # 
-        thread.start() # 
+        threads.append(thread)  #
+        thread.start()  #
         print(f"thread Client-{client_id} ({filename}) successfully started.")
 
-    
-        time.sleep(0.1) # a little delay to stagger the start of threads
-
-
     for thread in threads:
-        thread.join() # # Wait for all threads to finish
+        thread.join()  # # Wait for all threads to finish
 
     print("all clients have finished sending messages.")
+
