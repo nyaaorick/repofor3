@@ -42,7 +42,6 @@ This project is the third programming assignment for the COMPX234 course. The go
 
 ### Tuple Space (`tuple_space.py`)
 
-* (You need to describe the main functionalities and implementation of `tuple_space.py` here, for example:)
 * Uses a thread-safe data structure (e.g., a dictionary protected by `threading.Lock`) to store tuples.
 * Implements `put(key, value)`, `get(key)`, and `read(key)` methods to handle tuple addition, deletion, and retrieval logic, ensuring atomic operations.
 * Implements a `calculate_stats()` method to compute statistics related to the tuple space (tuple count, average sizes, etc.).
