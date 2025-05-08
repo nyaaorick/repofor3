@@ -224,7 +224,6 @@ def report_stats(interval, tuple_space):
         print(f"    - Avg Key Size: {ts_stats['avg_key_size']:.2f}")
         print(f"    - Avg Value Size: {ts_stats['avg_value_size']:.2f}")
         print(f"  Operations:")
-        print(f"    - Total: {current_stats['total_ops']}")
         print(f"    - READs: {current_stats['read_ops']}")
         print(f"    - GETs: {current_stats['get_ops']}")
         print(f"    - PUTs: {current_stats['put_ops']}")

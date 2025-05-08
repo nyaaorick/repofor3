@@ -158,11 +158,17 @@ if __name__ == "__main__":
     filenames = [
         'test-workload/client_1.txt',
         'test-workload/client_2.txt',
+        'test-workload/client_3.txt',
+        'test-workload/client_4.txt',
+        'test-workload/client_5.txt',
+        'test-workload/client_6.txt',
+        'test-workload/client_7.txt',
+        'test-workload/client_8.txt',
+        'test-workload/client_9.txt',
         'test-workload/client_10.txt'
     ]
 
     threads = []
-
     for i, filename in enumerate(filenames):
         client_id = i + 1
         thread = threading.Thread(target=client_task, args=(client_id, server_host, server_port, filename))
