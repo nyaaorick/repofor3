@@ -19,14 +19,16 @@ stats = {
 
 stats_lock = threading.Lock() # A single lock to protect the entire stats dictionary
 
-# --- Update Stats Safely ---
-def update_stats(key, increment=1):#add a default increment of 1
+#update stats
+def update_stats(key, increment=1):
     with stats_lock:
         if key in stats:
             stats[key] += increment
+            # If it's a primary operation type, also update total_ops
+            if key in ["read_ops", "get_ops", "put_ops"]:
+                stats["total_ops"] += increment # Ensure this is also incremented
         else:
             print(f"[Warning] Attempted to update unknown stat key: {key}")
-
 
 # --- Read Stats Safely ---
 def get_stat(key): #add a default value of 0

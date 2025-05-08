@@ -25,9 +25,7 @@ def send_nnn_message(sock, payload_str, client_id_for_log="?"):
 
 
  # Send a message to the server
-def receive_nnn_message(sock, client_id_for_log="?"):  # 保持 client_id_for_log
-
-    message_body = None
+def receive_nnn_message(sock, client_id_for_log="?"):  #client_id_for_log
     try:
         header_bytes = sock.recv(3)
         if not header_bytes or len(header_bytes) < 3:
