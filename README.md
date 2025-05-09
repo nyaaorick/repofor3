@@ -25,7 +25,7 @@ This project is the third programming assignment for the COMPX234 course. The go
     * Total number of operations, as well as separate counts for `READ`, `GET`, and `PUT` operations.
     * Total number of errors encountered.
 * **Error Handling**: Capable of handling invalid requests, network issues, etc.
-* **Command-Line Startup**: Specifies the listening port number (range: 50000-59999) via command-line arguments.
+* **Command-Line Startup**: Specifies the listening port number 51234
 
 ### Client (`multiclient.py`)
 
